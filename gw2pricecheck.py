@@ -34,22 +34,21 @@ def fetch_item_data(item_id):
         print(f"Error fetching data for item ID {item_id}: {e}")
         return None
 
-# Function to fetch data for all item IDs and sort by raw price
-def get_sorted_items_data(sort_order):
+# Function to fetch data for all item IDs and sort by raw price (highest to lowest)
+def get_sorted_items_data():
     data = [fetch_item_data(item_id) for item_id in ITEM_IDS]
     data = [d for d in data if d is not None]
-    sorted_data = sorted(data, key=lambda x: x["PriceRaw"], reverse=(sort_order == 'desc'))
+    sorted_data = sorted(data, key=lambda x: x["PriceRaw"], reverse=True)
     for item in sorted_data:
-        item.pop("PriceRaw")  # Remove the raw price after sorting
+        item.pop("PriceRaw")  # Remove raw price after sorting
     return pd.DataFrame(sorted_data)
 
 # Shiny UI
 app_ui = ui.page_fluid(
     ui.panel_title(ui.h1("Guild Wars 2 - Price Tracker", style="text-align: center; margin-bottom: 30px;")),
     ui.div(
-        ui.input_select("sort_order", "Sort Order", choices={"asc": "Low to High", "desc": "High to Low"}, selected='desc'),
         ui.input_action_button("refresh", "Refresh Data", class_="btn btn-primary"),
-        style="display: flex; justify-content: space-between; max-width: 900px; margin: 0 auto; margin-bottom: 20px;"
+        style="text-align: center; margin-bottom: 20px;"
     ),
     ui.div(
         ui.output_ui("item_table"),
@@ -65,22 +64,28 @@ app_ui = ui.page_fluid(
 # Shiny Server
 def server(input, output, session):
 
-    @reactive.Calc
-    def item_data():
-        sort_order = input.sort_order() or 'desc'
-        return get_sorted_items_data(sort_order)
+    # Reactive value to store item data and last update time
+    data_store = reactive.Value(get_sorted_items_data())
+    last_update_time = reactive.Value(datetime.now().strftime('%I:%M %p'))
 
+    # Fetch data when the refresh button is clicked
+    @reactive.Effect
+    @reactive.event(input.refresh)
+    def on_refresh():
+        data_store.set(get_sorted_items_data())
+        last_update_time.set(datetime.now().strftime('%I:%M %p'))
+
+    # Render the last updated time
     @output
     @render.text
     def last_updated():
-        return f"Last Updated: {datetime.now().strftime('%I:%M %p')}"
+        return f"Last Updated: {last_update_time.get()}"
 
+    # Render the item table
     @output
     @render.ui
-    @reactive.event(input.refresh, input.sort_order)  # Ensure that this event listens to both inputs
     def item_table():
-        df = item_data()
-        
+        df = data_store.get()
         # Render the table as HTML with the proper layout and styles
         return ui.HTML(df.to_html(index=False, escape=False, justify='center', classes='table table-striped table-hover'))
 
