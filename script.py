@@ -48,7 +48,7 @@ def get_sorted_items_data(sort_order):
 
 # Shiny UI
 app_ui = ui.page_fluid(
-    ui.panel_title(ui.h1("Guild Wars 2 - Price Tracker", style="text-align: center; margin-bottom: 30px;")),
+    ui.panel_title(ui.h1("Guild Wars m2 - Price Tracker", style="text-align: center; margin-bottom: 30px;")),
     ui.div(
         ui.div(
             ui.input_select("sort_order", "Sort Order", choices={"asc": "Low to High", "desc": "High to Low"}, selected='desc'),
