@@ -51,21 +51,24 @@ app_ui = ui.page_fluid(
     ui.panel_title(ui.h1("Guild Wars 2 - Price Tracker", style="text-align: center; margin-bottom: 30px;")),
     ui.div(
         ui.div(
+            ui.input_select("sort_order", "Sort Order", choices={"asc": "Low to High", "desc": "High to Low"}, selected='desc'),
+            style="display: inline-block; width: 49%; text-align: left;"
+        ),
+        ui.div(
             ui.input_action_button("refresh", "Refresh Data", class_="btn btn-primary"),
-            ui.input_radio_buttons("sort_order", "Sort Order", choices={"asc": "Low to High", "desc": "High to Low"}, inline=True, selected='desc'),
-            style="text-align: center; margin-bottom: 20px;"
+            style="display: inline-block; width: 49%; text-align: right;"
         ),
-        ui.div(
-            ui.output_table("item_table"),
-            style="width: 100%; margin: 0 auto; border: 1px solid #ccc; padding: 20px; border-radius: 8px; background-color: #f9f9f9;"
-        ),
-        ui.div(
-            ui.output_text("last_updated", container=ui.h6),
-            style="text-align: center; margin-top: 10px;"
-        ),
-        style="max-width: 900px; margin: 0 auto;"
+        style="max-width: 900px; margin: 0 auto; margin-bottom: 20px;"
     ),
-    style="background-color: #f1f1f1; padding: 20px;"
+    ui.div(
+        ui.output_table("item_table"),
+        style="max-width: 900px; margin: 0 auto; padding-left: 40px; padding-right: 40px; border: 5px solid #ccc; padding: 20px; border-radius: 8px; background-color: #f9f9f9;"
+    ),
+    ui.div(
+        ui.output_text("last_updated", container=ui.h6),
+        style="text-align: center; margin-top: 10px;"
+    ),
+    style="background-color: #FFFFFF; padding: 20px;"
 )
 
 # Shiny Server
@@ -78,7 +81,6 @@ def server(input, output, session):
 
     @output
     @render.text
-    @reactive.event(input.refresh)
     def last_updated():
         return f"Last Updated: {pd.Timestamp.now().strftime('%I:%M %p')}"
 
@@ -87,8 +89,9 @@ def server(input, output, session):
     @reactive.event(input.refresh, input.sort_order)
     def item_table():
         df = item_data()
-        df.style.set_properties(subset=['Price'], **{'white-space': 'nowrap'})
-        return df
+        return df.style.hide().set_properties(**{
+            'white-space': 'nowrap'
+        }, subset=['Price'])
 
 # Run the app
 app = App(app_ui, server)
