@@ -1,5 +1,6 @@
 import shiny
 from shiny import App, ui, reactive, render
+import os
 import requests
 import pandas as pd
 from datetime import datetime, timezone
@@ -103,17 +104,36 @@ def get_sorted_items_data():
 
 
 # Shiny UI
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+
 app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.script(src="https://unpkg.com/react@17/umd/react.development.js"),
-        ui.tags.script(
-            src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"
-        ),
+        ui.tags.script(src="https://unpkg.com/react-dom@17/umd/react.development.js"),
         ui.tags.script(src="https://unpkg.com/babel-standalone@6/babel.min.js"),
         ui.tags.script(src="https://unpkg.com/react-planet@1.0.1/dist/index.umd.js"),
-        ui.tags.script(src="static/js/react_component.js", type="text/babel"),
-        ui.tags.link(rel="stylesheet", href="static/css/styles.css"),
+        ui.tags.link(rel="stylesheet", href="css/styles.css"),
+        ui.tags.script(
+            """
+            function loadReactComponent() {
+                var script = document.createElement('script');
+                script.src = 'js/react_component.js';
+                script.type = 'text/babel';
+                document.body.appendChild(script);
+            }
+            window.onload = function() {
+                console.log('Window loaded');
+                if (typeof ReactPlanet !== 'undefined') {
+                    console.log('ReactPlanet loaded');
+                    loadReactComponent();
+                } else {
+                    console.error('ReactPlanet not loaded');
+                }
+            }
+        """
+        ),
     ),
+    ui.tags.title("Guild Wars 2 - Price Tracker"),
     ui.panel_title(
         ui.h1(
             "Guild Wars 2 - Price Tracker",
@@ -121,7 +141,9 @@ app_ui = ui.page_fluid(
         )
     ),
     ui.div(
-        ui.input_action_button("refresh", "Refresh Data", class_="btn btn-primary"),
+        ui.HTML(
+            '<div id="react-planet-root" style="height: 300px; border: 1px solid blue;"></div>'
+        ),
         style="text-align: center; margin-bottom: 20px;",
     ),
     ui.div(
@@ -132,14 +154,11 @@ app_ui = ui.page_fluid(
         ui.output_text("last_updated", container=ui.h6),
         style="text-align: center; margin-top: 10px;",
     ),
-    ui.HTML('<div id="react-planet-root"></div>'),
     style="background-color: #FFFFFF; padding: 20px;",
 )
 
 
-# Shiny Server
 def server(input, output, session):
-
     # Reactive value to store item data and last update time
     data_store = reactive.Value(get_sorted_items_data())
     last_update_time = reactive.Value(
@@ -175,6 +194,8 @@ def server(input, output, session):
         )
 
 
-# Run the app
-app = App(app_ui, server, template_file="templates/index.html")
-shiny.run_app(app)
+# Run the App
+app = App(app_ui, server, static_assets=static_dir)
+
+if __name__ == "__main__":
+    shiny.run_app(app)
